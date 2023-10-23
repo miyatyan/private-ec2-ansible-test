@@ -2,16 +2,25 @@
 - hosts: all
   gather_facts: no
   vars:
-    ansible_host: i-XXXXXXXXXXXXXXXXX
-    ansible_ssh_common_args: -o ProxyCommand="ssh -o StrictHostKeyChecking=no -i {{ bastion_ssh_private_key_file }} {{ bastion_user }}@{{ bastion_IP }} \"sudo su -lc 'aws ssm start-session --target i-XXXXXXXXXXXXXXXXX --document-name AWS-StartSSHSession --parameters 'portNumber=22''\""
-    ansible_user: ec2-user
-    ansible_become: true
-    ansible_ssh_private_key_file: /root/.ssh/test-server.pem
+    bastion_user: ec2-user
+    bastion_host: XX.XX.XX.XXX
+    bastion_ssh_private_key_file: /root/.ssh/bastion-server.pem
+    test_user: ec2-user
+    test_host: i-XXXXXXXXXXXXXXXXX # instance id
+    test_ssh_private_key_file: /root/.ssh/test-server.pem
   tasks:
-    - name: setup tmp file
-      ansible.builtin.shell: |
-        touch /tmp/test-ssm-ssh
-    
-    - name: check tmp file
-      ansible.builtin.stat:
-        path: /tmp/test-ssm-ssh
+    - block: 
+        - name: setup tmp file
+          ansible.builtin.shell: |
+            touch /tmp/test-ssm-ssh
+        
+        - name: check tmp file
+          ansible.builtin.stat:
+            path: /tmp/test-ssm-ssh
+      
+      vars:
+        ansible_host: "{{ test_host }}"
+        ansible_ssh_common_args: -o ProxyCommand="ssh -o StrictHostKeyChecking=no -i {{ bastion_ssh_private_key_file }} {{ bastion_user }}@{{ bastion_host }} \"sudo su -lc 'aws ssm start-session --target {{ test_host }} --document-name AWS-StartSSHSession --parameters 'portNumber=22''\""
+        ansible_user: "{{ test_user }}"
+        ansible_ssh_private_key_file: "{{ test_ssh_private_key_file }}"
+        ansible_become: true
